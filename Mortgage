@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mortgage Amortization Tool</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    h1 { text-align: center; }
+    label, input { display: block; margin-bottom: 0.5rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: right; }
+    th { background-color: #f4f4f4; }
+    .form-group { margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Mortgage Amortization Tool</h1>
+  <div class="form-group">
+    <label>Loan Amount ($): <input type="number" id="loanAmount" /></label>
+    <label>Annual Interest Rate (%): <input type="number" step="0.01" id="interestRate" /></label>
+    <label>Loan Term (Years): <input type="number" id="loanTerm" /></label>
+    <label>Monthly Extra Payment ($): <input type="number" id="extraPayment" value="0" /></label>
+    <label>Months for Extra Payment (Comma separated, e.g., 3,5,8): <input type="text" id="extraPaymentMonths" /></label>
+    <button onclick="generateSchedule()">Generate Schedule</button>
+    <button onclick="saveData()">Save</button>
+    <button onclick="loadData()">Load</button>
+  </div>
+  <table id="schedule">
+    <thead>
+      <tr>
+        <th>Month</th>
+        <th>Payment</th>
+        <th>Principal</th>
+        <th>Interest</th>
+        <th>Extra Payment</th>
+        <th>Balance</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    function generateSchedule() {
+      const P = parseFloat(document.getElementById('loanAmount').value);
+      const r = parseFloat(document.getElementById('interestRate').value) / 100 / 12;
+      const n = parseInt(document.getElementById('loanTerm').value) * 12;
+      const extra = parseFloat(document.getElementById('extraPayment').value);
+      const extraPaymentMonths = document.getElementById('extraPaymentMonths').value.split(',').map(month => parseInt(month.trim()));
+      const payment = (P * r) / (1 - Math.pow(1 + r, -n));
+
+      let balance = P;
+      let month = 1;
+      const tbody = document.querySelector('#schedule tbody');
+      tbody.innerHTML = '';
+
+      while (balance > 0) {
+        const interest = balance * r;
+        let principal = payment - interest;
+        let actualExtra = 0;
+
+        if (extraPaymentMonths.includes(month)) {
+          actualExtra = Math.min(extra, balance);
+        }
+
+        if (principal + actualExtra > balance) {
+          principal = balance;
+          actualExtra = 0;
+        }
+
+        balance -= (principal + actualExtra);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${month}</td>
+          <td>${(payment + actualExtra).toFixed(2)}</td>
+          <td>${principal.toFixed(2)}</td>
+          <td>${interest.toFixed(2)}</td>
+          <td>${actualExtra.toFixed(2)}</td>
+          <td>${balance.toFixed(2)}</td>
+        `;
+        tbody.appendChild(row);
+        if (balance <= 0) break;
+        month++;
+      }
+    }
+
+    function saveData() {
+      const data = {
+        loanAmount: document.getElementById('loanAmount').value,
+        interestRate: document.getElementById('interestRate').value,
+        loanTerm: document.getElementById('loanTerm').value,
+        extraPayment: document.getElementById('extraPayment').value,
+        extraPaymentMonths: document.getElementById('extraPaymentMonths').value
+      };
+      localStorage.setItem('mortgageData', JSON.stringify(data));
+      alert('Data saved successfully!');
+    }
+
+    function loadData() {
+      const data = JSON.parse(localStorage.getItem('mortgageData'));
+      if (data) {
+        document.getElementById('loanAmount').value = data.loanAmount;
+        document.getElementById('interestRate').value = data.interestRate;
+        document.getElementById('loanTerm').value = data.loanTerm;
+        document.getElementById('extraPayment').value = data.extraPayment;
+        document.getElementById('extraPaymentMonths').value = data.extraPaymentMonths;
+        generateSchedule();
+        alert('Data loaded successfully!');
+      } else {
+        alert('No saved data found.');
+      }
+    }
+  </script>
+</body>
+</html>
